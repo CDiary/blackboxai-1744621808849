@@ -1,0 +1,14 @@
+{
+    "records": [
+        {
+            "id": "example1",
+            "title": "Sample Math Video",
+            "imageLink": "./assets/images/sample-math.jpg",
+            "videoLink": "./assets/videos/sample-math.mp4",
+            "class": "10",
+            "ncertCbse": "NCERT",
+            "created_at": "2024-04-13T12:00:00.000Z",
+            "created_by": "admin"
+        }
+    ]
+}
