@@ -37,9 +37,10 @@
         <div class="bg-white rounded-lg shadow-lg p-6">
             <!-- Video Player -->
             <div class="video-container rounded-lg overflow-hidden mb-6">
-                <iframe id="videoPlayer" class="w-full h-full" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen></iframe>
+                <video id="videoPlayer" class="w-full h-full" controls>
+                    <source src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
 
             <!-- Video Details -->
@@ -52,6 +53,14 @@
                 <div class="flex items-center space-x-4">
                     <span id="videoClass" class="px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800"></span>
                     <span id="videoType" class="px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800"></span>
+                </div>
+
+                <!-- Video Thumbnail -->
+                <div class="mt-4">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Thumbnail</h3>
+                    <img id="videoThumbnail" src="" alt="Video Thumbnail" 
+                        class="max-h-48 rounded-lg shadow-md"
+                        onerror="this.src='https://via.placeholder.com/640x360.png?text=No+Preview+Available'">
                 </div>
             </div>
         </div>
@@ -68,9 +77,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const videoId = urlParams.get('id');
 
-        function loadVideo() {
+        async function loadVideo() {
             try {
-                const records = JSON.parse(localStorage.getItem('records') || '[]');
+                const response = await fetch('/database/records.json');
+                const data = await response.json();
+                const records = data.records || [];
                 const video = records.find(r => r.id === videoId);
 
                 if (!video) {
@@ -84,7 +95,24 @@
                 
                 // Update video player
                 const videoPlayer = document.getElementById('videoPlayer');
-                videoPlayer.src = video.videoLink;
+                videoPlayer.innerHTML = ''; // Clear existing source elements
+                
+                // Check if it's a YouTube embed URL
+                if (video.videoLink.includes('youtube.com/embed')) {
+                    // Replace video element with iframe for YouTube
+                    const iframe = document.createElement('iframe');
+                    iframe.src = video.videoLink;
+                    iframe.className = 'w-full h-full';
+                    iframe.allowFullscreen = true;
+                    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                    videoPlayer.parentNode.replaceChild(iframe, videoPlayer);
+                } else {
+                    // Local video file
+                    const source = document.createElement('source');
+                    source.src = video.videoLink;
+                    source.type = 'video/mp4';
+                    videoPlayer.appendChild(source);
+                }
 
                 // Update video details
                 document.getElementById('videoTitle').textContent = video.title;
@@ -92,6 +120,7 @@
                 document.getElementById('videoDetails').textContent = `Added by ${video.created_by} on ${new Date(video.created_at).toLocaleDateString()}`;
                 document.getElementById('videoClass').textContent = `Class ${video.class}`;
                 document.getElementById('videoType').textContent = video.ncertCbse;
+                document.getElementById('videoThumbnail').src = video.imageLink;
             } catch (error) {
                 console.error('Error loading video:', error);
                 alert('Error loading video');
@@ -99,7 +128,9 @@
         }
 
         // Load video on page load
-        loadVideo();
+        (async () => {
+            await loadVideo();
+        })();
     </script>
 </body>
 </html>
