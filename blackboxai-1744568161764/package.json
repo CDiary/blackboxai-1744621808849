@@ -1,0 +1,55 @@
+{
+  "name": "electron-auth-app",
+  "version": "1.0.0",
+  "description": "Electron authentication app with dashboard",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "electron-builder build --win",
+    "build:win": "electron-builder build --win --x64"
+  },
+  "build": {
+    "appId": "com.electron.auth-app",
+    "productName": "Electron Auth App",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "files": [
+      "**/*",
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "src/",
+        "to": "src/",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@electron/remote": "^2.1.2",
+    "bcryptjs": "^2.4.3",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.9"
+  },
+  "devDependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^24.6.4"
+  }
+}
