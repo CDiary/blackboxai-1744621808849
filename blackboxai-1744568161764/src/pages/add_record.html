@@ -172,17 +172,29 @@
                 const records = await loadRecords();
                 records.push(newRecord);
                 
-                // Create a download link for the updated records.json
-                const blob = new Blob([JSON.stringify({ records: records }, null, 2)], { type: 'application/json' });
-                const downloadLink = document.createElement('a');
-                downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = 'records.json';
-                downloadLink.click();
-                
-                alert('Record added successfully! Please save the records.json file to the src/database directory.');
-                return true;
+                // Send the updated records to the server
+                const response = await fetch('/save-records', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ records: records })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save record');
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Record added successfully!');
+                    return true;
+                } else {
+                    throw new Error('Failed to save record');
+                }
             } catch (error) {
                 console.error('Error saving record:', error);
+                alert('Failed to save record. Please try again.');
                 return false;
             }
         }
