@@ -67,6 +67,50 @@
             </div>
 
             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="sessionDuration">
+                    Session Duration (minutes)
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                        <i class="fas fa-clock text-gray-400"></i>
+                    </span>
+                    <input type="number" id="sessionDuration" name="sessionDuration" required min="1"
+                        class="pl-10 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter session duration" value="60">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="permission">
+                    Permission Level
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                        <i class="fas fa-user-shield text-gray-400"></i>
+                    </span>
+                    <select id="permission" name="permission" required
+                        class="pl-10 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="validityDays">
+                    Account Validity (days)
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                        <i class="fas fa-calendar text-gray-400"></i>
+                    </span>
+                    <input type="number" id="validityDays" name="validityDays" required min="1"
+                        class="pl-10 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter validity period" value="365">
+                </div>
+            </div>
+
+            <div>
                 <button type="submit"
                     class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-300">
                     Create Account
@@ -86,9 +130,9 @@
 
         async function loadUsers() {
             try {
-                const response = await fetch('../database/users.json');
+                const response = await fetch('/database/users.json');
                 const data = await response.json();
-                return data.users;
+                return data.users || [];
             } catch (error) {
                 console.error('Error loading users:', error);
                 return [];
@@ -100,17 +144,29 @@
                 const users = await loadUsers();
                 users.push(user);
                 
-                // Create a download link for the updated users.json
-                const blob = new Blob([JSON.stringify({ users: users }, null, 2)], { type: 'application/json' });
-                const downloadLink = document.createElement('a');
-                downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = 'users.json';
-                downloadLink.click();
-                
-                alert('User registered successfully! Please save the users.json file to the src/database directory.');
-                return true;
+                // Send updated users to the server
+                const response = await fetch('/save-users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ users: users })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save user');
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('User registered successfully!');
+                    return true;
+                } else {
+                    throw new Error('Failed to save user');
+                }
             } catch (error) {
                 console.error('Error saving user:', error);
+                alert('Failed to register user. Please try again.');
                 return false;
             }
         }
@@ -134,10 +190,21 @@
                     return;
                 }
                 
+                const sessionDuration = parseInt(document.getElementById('sessionDuration').value);
+                const permission = document.getElementById('permission').value;
+                const validityDays = parseInt(document.getElementById('validityDays').value);
+                
+                // Calculate account validity date
+                const validityDate = new Date();
+                validityDate.setDate(validityDate.getDate() + validityDays);
+
                 const newUser = {
                     username,
                     password,
+                    permission,
+                    session_duration: sessionDuration,
                     created_at: new Date().toISOString(),
+                    account_validity: validityDate.toISOString(),
                     last_login: null,
                     login_duration: 0
                 };
