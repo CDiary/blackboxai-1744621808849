@@ -92,9 +92,11 @@
             return new Date(validityDate) > new Date();
         }
 
-        function loadUsers(searchTerm = '', permissionFilter = '', validityFilter = '') {
+        async function loadUsers(searchTerm = '', permissionFilter = '', validityFilter = '') {
             try {
-                const users = JSON.parse(localStorage.getItem('users') || '[]');
+                const response = await fetch('/database/users.json');
+                const data = await response.json();
+                const users = data.users || [];
                 const tbody = document.getElementById('usersTableBody');
                 tbody.innerHTML = '';
 
@@ -161,33 +163,35 @@
         }
 
         // Event Listeners
-        document.getElementById('searchInput').addEventListener('input', (e) => {
+        document.getElementById('searchInput').addEventListener('input', async (e) => {
             const permissionFilter = document.getElementById('permissionFilter').value;
             const validityFilter = document.getElementById('validityFilter').value;
-            loadUsers(e.target.value, permissionFilter, validityFilter);
+            await loadUsers(e.target.value, permissionFilter, validityFilter);
         });
 
-        document.getElementById('permissionFilter').addEventListener('change', (e) => {
+        document.getElementById('permissionFilter').addEventListener('change', async (e) => {
             const searchTerm = document.getElementById('searchInput').value;
             const validityFilter = document.getElementById('validityFilter').value;
-            loadUsers(searchTerm, e.target.value, validityFilter);
+            await loadUsers(searchTerm, e.target.value, validityFilter);
         });
 
-        document.getElementById('validityFilter').addEventListener('change', (e) => {
+        document.getElementById('validityFilter').addEventListener('change', async (e) => {
             const searchTerm = document.getElementById('searchInput').value;
             const permissionFilter = document.getElementById('permissionFilter').value;
-            loadUsers(searchTerm, permissionFilter, e.target.value);
+            await loadUsers(searchTerm, permissionFilter, e.target.value);
         });
 
-        document.getElementById('refreshBtn').addEventListener('click', () => {
+        document.getElementById('refreshBtn').addEventListener('click', async () => {
             document.getElementById('searchInput').value = '';
             document.getElementById('permissionFilter').value = '';
             document.getElementById('validityFilter').value = '';
-            loadUsers();
+            await loadUsers();
         });
 
         // Initial load
-        loadUsers();
+        (async () => {
+            await loadUsers();
+        })();
     </script>
 </body>
 </html>
