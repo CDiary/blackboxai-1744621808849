@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' https: data:;">
     <title>Login - Auth App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,16 +15,31 @@
             background-size: cover;
             background-position: center;
         }
+        /* Prevent text selection for security */
+        * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        /* Allow text selection in input fields */
+        input {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
     </style>
+    <script src="js/security.js"></script>
 </head>
-<body class="min-h-screen flex items-center justify-center bg-gray-100">
+<body class="min-h-screen flex items-center justify-center bg-gray-100" oncontextmenu="return false">
     <div class="bg-white p-8 rounded-lg shadow-2xl w-96 backdrop-blur-lg bg-opacity-90">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h1>
             <p class="text-gray-600">Please sign in to continue</p>
         </div>
 
-        <form id="loginForm" class="space-y-6">
+        <form id="loginForm" class="space-y-6" autocomplete="off">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2" for="username">
                     Username
@@ -68,45 +84,116 @@
     </div>
 
     <script>
-        // Initialize users in localStorage if not exists
-        if (!localStorage.getItem('users')) {
-            localStorage.setItem('users', JSON.stringify([]));
-        }
-        
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            try {
-                const users = JSON.parse(localStorage.getItem('users'));
-                const user = users.find(u => u.username === username && u.password === password);
-                
-                if (user) {
-                    // Update last login time and duration
-                    const currentTime = new Date();
-                    const lastLoginTime = user.last_login ? new Date(user.last_login) : null;
-                    
-                    user.last_login = currentTime.toISOString();
-                    if (lastLoginTime) {
-                        const duration = Math.floor((currentTime - lastLoginTime) / (1000 * 60)); // Duration in minutes
-                        user.login_duration = (user.login_duration || 0) + duration;
-                    }
-                    
-                    localStorage.setItem('users', JSON.stringify(users));
-                    localStorage.setItem('currentUser', username);
-                    
-                    // Redirect to dashboard
-                    window.location.href = 'dashboard.html';
-                } else {
-                    alert('Invalid username or password');
+        (function() {
+            // Prevent DevTools
+            document.addEventListener('keydown', function(e) {
+                if (e.keyCode === 123 || // F12
+                    (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+                    (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+                    (e.ctrlKey && e.keyCode === 85)) { // Ctrl+U
+                    e.preventDefault();
+                    return false;
                 }
-            } catch (error) {
-                console.error('Error during login:', error);
-                alert('An error occurred during login. Please try again.');
+            });
+
+            let loginAttempts = 0;
+            const maxAttempts = 3;
+            let lockoutTime = null;
+
+            async function loadUsers() {
+                try {
+                    const response = await fetch('/database/users.json');
+                    const data = await response.json();
+                    return data.users || [];
+                } catch (error) {
+                    console.error('Error loading users:', error);
+                    return [];
+                }
             }
-        });
+
+            async function updateUser(users, updatedUser) {
+                try {
+                    const response = await fetch('/save-users', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ users: users })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to update user');
+                    }
+
+                    return (await response.json()).success;
+                } catch (error) {
+                    console.error('Error updating user:', error);
+                    return false;
+                }
+            }
+
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                // Check if user is locked out
+                if (lockoutTime && new Date() < lockoutTime) {
+                    const remainingTime = Math.ceil((lockoutTime - new Date()) / 1000);
+                    alert(`Too many login attempts. Please try again in ${remainingTime} seconds.`);
+                    return;
+                }
+
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                try {
+                    const users = await loadUsers();
+                    const userIndex = users.findIndex(u => u.username === username && u.password === password);
+
+                    if (userIndex !== -1) {
+                        // Reset login attempts on successful login
+                        loginAttempts = 0;
+                        lockoutTime = null;
+
+                        // Update last login time and duration
+                        const currentTime = new Date();
+                        const user = users[userIndex];
+                        const lastLoginTime = user.last_login ? new Date(user.last_login) : null;
+
+                        user.last_login = currentTime.toISOString();
+                        if (lastLoginTime) {
+                            const duration = Math.floor((currentTime - lastLoginTime) / (1000 * 60));
+                            user.login_duration = (user.login_duration || 0) + duration;
+                        }
+
+                        // Update user in database
+                        users[userIndex] = user;
+                        const updateSuccess = await updateUser(users, user);
+                        
+                        if (updateSuccess) {
+                            localStorage.setItem('currentUser', username);
+                            window.location.href = 'dashboard.html';
+                        } else {
+                            throw new Error('Failed to update user login time');
+                        }
+                    } else {
+                        loginAttempts++;
+                        
+                        if (loginAttempts >= maxAttempts) {
+                            lockoutTime = new Date(Date.now() + 30000); // 30 seconds lockout
+                            alert('Too many failed login attempts. Please try again in 30 seconds.');
+                        } else {
+                            alert(`Invalid username or password. ${maxAttempts - loginAttempts} attempts remaining.`);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error during login:', error);
+                    alert('An error occurred during login. Please try again.');
+                }
+            });
+
+            // Clear any existing session
+            localStorage.removeItem('currentUser');
+        })();
     </script>
 </body>
 </html>
