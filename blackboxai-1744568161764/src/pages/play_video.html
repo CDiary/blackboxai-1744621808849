@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Videos - Auth App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="dashboard.html" class="text-gray-600 hover:text-gray-800 mr-4">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                    <span class="text-xl font-bold text-gray-800">Video Library</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="classFilter">
+                        Class
+                    </label>
+                    <select id="classFilter" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">All Classes</option>
+                        <option value="6">Class 6</option>
+                        <option value="7">Class 7</option>
+                        <option value="8">Class 8</option>
+                        <option value="9">Class 9</option>
+                        <option value="10">Class 10</option>
+                        <option value="11">Class 11</option>
+                        <option value="12">Class 12</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="typeFilter">
+                        Type
+                    </label>
+                    <select id="typeFilter" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">All Types</option>
+                        <option value="NCERT">NCERT</option>
+                        <option value="CBSE">CBSE</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" for="searchInput">
+                        Search
+                    </label>
+                    <input type="text" id="searchInput" placeholder="Search by title..."
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div class="flex items-end">
+                    <button id="resetFilters" class="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors duration-300">
+                        Reset Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Videos Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="videosGrid">
+            <!-- Videos will be inserted here -->
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        const currentUser = localStorage.getItem('currentUser');
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+
+        function loadRecords(filters = {}) {
+            try {
+                const records = JSON.parse(localStorage.getItem('records') || '[]');
+                const grid = document.getElementById('videosGrid');
+                grid.innerHTML = '';
+
+                records
+                    .filter(record => {
+                        const matchesClass = !filters.class || record.class === filters.class;
+                        const matchesType = !filters.type || record.ncertCbse === filters.type;
+                        const matchesSearch = !filters.search || 
+                            record.title.toLowerCase().includes(filters.search.toLowerCase());
+                        
+                        return matchesClass && matchesType && matchesSearch;
+                    })
+                    .forEach(record => {
+                        // Generate a unique ID if not exists
+                        if (!record.id) {
+                            record.id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+                        }
+
+                        const card = document.createElement('div');
+                        card.className = 'bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300';
+                        card.innerHTML = `
+                            <div class="aspect-w-16 aspect-h-9 relative">
+                                <img src="${record.imageLink}" alt="${record.title}" 
+                                    class="w-full h-48 object-cover"
+                                    onerror="this.src='https://via.placeholder.com/640x360.png?text=No+Preview+Available'">
+                                <button onclick="playVideo('${record.id}')"
+                                    class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 hover:opacity-100 transition-opacity duration-300">
+                                    <i class="fas fa-play text-white text-4xl"></i>
+                                </button>
+                            </div>
+                            <div class="p-4">
+                                <h3 class="text-lg font-semibold text-gray-800 mb-2">${record.title}</h3>
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        Class ${record.class}
+                                    </span>
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                        ${record.ncertCbse}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-600">
+                                    Added by ${record.created_by}
+                                </p>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+
+                // Update localStorage with IDs if needed
+                localStorage.setItem('records', JSON.stringify(records));
+            } catch (error) {
+                console.error('Error loading records:', error);
+            }
+        }
+
+        function playVideo(id) {
+            window.location.href = `video_player.html?id=${id}`;
+        }
+
+        // Event Listeners
+        document.getElementById('classFilter').addEventListener('change', updateFilters);
+        document.getElementById('typeFilter').addEventListener('change', updateFilters);
+        document.getElementById('searchInput').addEventListener('input', updateFilters);
+
+        document.getElementById('resetFilters').addEventListener('click', () => {
+            document.getElementById('classFilter').value = '';
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            updateFilters();
+        });
+
+        function updateFilters() {
+            const filters = {
+                class: document.getElementById('classFilter').value,
+                type: document.getElementById('typeFilter').value,
+                search: document.getElementById('searchInput').value
+            };
+            loadRecords(filters);
+        }
+
+        // Initial load
+        loadRecords();
+    </script>
+</body>
+</html>
