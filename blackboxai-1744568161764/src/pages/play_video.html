@@ -86,9 +86,11 @@
             window.location.href = 'login.html';
         }
 
-        function loadRecords(filters = {}) {
+        async function loadRecords(filters = {}) {
             try {
-                const records = JSON.parse(localStorage.getItem('records') || '[]');
+                const response = await fetch('/database/records.json');
+                const data = await response.json();
+                const records = data.records || [];
                 const grid = document.getElementById('videosGrid');
                 grid.innerHTML = '';
 
@@ -149,28 +151,28 @@
         }
 
         // Event Listeners
-        document.getElementById('classFilter').addEventListener('change', updateFilters);
-        document.getElementById('typeFilter').addEventListener('change', updateFilters);
-        document.getElementById('searchInput').addEventListener('input', updateFilters);
+        document.getElementById('classFilter').addEventListener('change', () => updateFilters());
+        document.getElementById('typeFilter').addEventListener('change', () => updateFilters());
+        document.getElementById('searchInput').addEventListener('input', () => updateFilters());
 
-        document.getElementById('resetFilters').addEventListener('click', () => {
+        document.getElementById('resetFilters').addEventListener('click', async () => {
             document.getElementById('classFilter').value = '';
             document.getElementById('typeFilter').value = '';
             document.getElementById('searchInput').value = '';
-            updateFilters();
+            await updateFilters();
         });
 
-        function updateFilters() {
+        async function updateFilters() {
             const filters = {
                 class: document.getElementById('classFilter').value,
                 type: document.getElementById('typeFilter').value,
                 search: document.getElementById('searchInput').value
             };
-            loadRecords(filters);
+            await loadRecords(filters);
         }
 
         // Initial load
-        loadRecords();
+        updateFilters();
     </script>
 </body>
 </html>
