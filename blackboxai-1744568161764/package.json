@@ -46,6 +46,7 @@
     "@electron/remote": "^2.1.2",
     "bcryptjs": "^2.4.3",
     "express": "^5.1.0",
+    "morgan": "^1.10.0",
     "nodemon": "^3.1.9"
   },
   "devDependencies": {
