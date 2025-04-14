@@ -1,3 +1,11 @@
 {
-    "users": []
-}
+    "users": [
+      {
+        "username": "saga5",
+        "password": "saga5",
+        "created_at": "2025-04-14T08:19:21.021Z",
+        "last_login": "2025-04-14T08:19:33.211Z",
+        "login_duration": 0
+      }
+    ]
+  }
