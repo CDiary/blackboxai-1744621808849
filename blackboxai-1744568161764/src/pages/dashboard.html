@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Auth App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-gray-800">Dashboard</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="username" class="text-gray-600"></span>
+                    <button onclick="logout()" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Add Record -->
+            <a href="add_record.html" class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-blue-100 p-3 rounded-lg">
+                        <i class="fas fa-plus text-blue-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Add Record</h3>
+                        <p class="text-gray-600">Add new video record</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- View Videos -->
+            <a href="play_video.html" class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-green-100 p-3 rounded-lg">
+                        <i class="fas fa-play text-green-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">View Videos</h3>
+                        <p class="text-gray-600">Browse and play videos</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Check Users -->
+            <a href="check_users.html" class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-purple-100 p-3 rounded-lg">
+                        <i class="fas fa-users text-purple-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Users</h3>
+                        <p class="text-gray-600">Manage user accounts</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Backup/Restore -->
+            <a href="backup_restore.html" class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-yellow-100 p-3 rounded-lg">
+                        <i class="fas fa-database text-yellow-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Backup/Restore</h3>
+                        <p class="text-gray-600">Manage system data</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Statistics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Recent Activity -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
+                <div id="recentActivity" class="space-y-4">
+                    <!-- Activity items will be inserted here -->
+                </div>
+            </div>
+
+            <!-- System Stats -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">System Statistics</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Total Records</span>
+                        <span id="totalRecords" class="font-semibold text-gray-800">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Total Users</span>
+                        <span id="totalUsers" class="font-semibold text-gray-800">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600">Last Backup</span>
+                        <span id="lastBackup" class="font-semibold text-gray-800">Never</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        const currentUser = localStorage.getItem('currentUser');
+        if (!currentUser) {
+            window.location.href = 'login.html';
+        }
+
+        // Display username
+        document.getElementById('username').textContent = currentUser;
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                // Load users
+                const usersResponse = await fetch('../database/users.json');
+                const usersData = await usersResponse.json();
+                document.getElementById('totalUsers').textContent = usersData.users.length;
+
+                // Load records
+                const recordsResponse = await fetch('../database/records.json');
+                const recordsData = await recordsResponse.json();
+                document.getElementById('totalRecords').textContent = recordsData.records.length;
+
+                // Load recent activity
+                const recentActivity = document.getElementById('recentActivity');
+                recentActivity.innerHTML = '';
+
+                // Combine and sort recent records and user activities
+                const activities = [
+                    ...recordsData.records.map(record => ({
+                        type: 'record',
+                        title: record.title,
+                        date: new Date(record.created_at),
+                        user: record.created_by
+                    })),
+                    ...usersData.users.map(user => ({
+                        type: 'user',
+                        title: user.username,
+                        date: new Date(user.last_login || user.created_at),
+                        action: user.last_login ? 'logged in' : 'registered'
+                    }))
+                ].sort((a, b) => b.date - a.date).slice(0, 5);
+
+                activities.forEach(activity => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 border rounded-lg';
+                    
+                    if (activity.type === 'record') {
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="font-medium text-gray-800">${activity.user}</span>
+                                    <span class="text-gray-600"> added video </span>
+                                    <span class="font-medium text-gray-800">${activity.title}</span>
+                                </div>
+                                <span class="text-sm text-gray-500">${activity.date.toLocaleDateString()}</span>
+                            </div>
+                        `;
+                    } else {
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="font-medium text-gray-800">${activity.title}</span>
+                                    <span class="text-gray-600"> ${activity.action}</span>
+                                </div>
+                                <span class="text-sm text-gray-500">${activity.date.toLocaleDateString()}</span>
+                            </div>
+                        `;
+                    }
+                    
+                    recentActivity.appendChild(div);
+                });
+
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        // Load initial statistics
+        loadStats();
+    </script>
+</body>
+</html>
